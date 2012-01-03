@@ -24,7 +24,7 @@ enum modes {APP_CLOCK1, APP_CLOCK2, APP_CLOCK3, APP_SETUP, SET_HOURS, SET_MINUTE
 char* month_names[12] = {"JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"};
 char* dow_names[7] = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"};
 
-int mode = 0; // default mode to clock
+int mode = 0; // default mode to APP_CLOCK1
 int prevMode = 0; // previous mode
 int seconds; // current seconds
 int minutes; // current minutes
@@ -34,13 +34,16 @@ int day; // current day
 int month; // current month
 int year; // current year
 
-long curTime = 0; // current time (timestamp)
+long curTime = 0; // current time (timestamp from atmega)
 long lastPush = 0; // last pushed settings button (timestamp)
 long lastRead = 0; // last read from RTC (timestamp)
 int lastSec = 0; // last second value
 boolean dotsOn = false; // current dots on / off flag
 boolean enableTone = false; // enable / disable tone
 
+/**
+ * Setup routine
+ */
 void setup() {
   // start clock if stopped
   if (RTC.isStopped()) {
@@ -49,6 +52,9 @@ void setup() {
     RTC.readClock();
 }
 
+/**
+ * Main loop routine
+ */
 void loop() {
   curTime = millis();
 
@@ -102,6 +108,9 @@ void loop() {
   }   
 }
 
+/**
+ * Common callback to switch mode
+ */
 void OnModeChanged() {
   if (prevMode != mode) {
      panel.clear();
@@ -131,29 +140,41 @@ void ApplicationClock1() {
   OnModeChanged();
   
   char* month_name = month_names[month-1];
-  panel.putstring(1,1, 3, month_name);
+  panel.set_font(3,5);
+  panel.putstring(1,1, month_name);
   char date[2];
   sprintf(date,"%d%d", (day>9) ? (day/10) : 0, day%10);
-  panel.putstring(16,1,3, date);
+  panel.putstring(16,1, date);
   
   char time[4];
   sprintf(time, "%d%d%d%d", (hours>9) ? (hours/10) : 0, hours%10, (minutes>9) ? (minutes/10) : 0, minutes%10);
   
-  panel.putmediumchar(0,8, time[0]);
-  panel.putmediumchar(6,8, time[1]);    
-  panel.putmediumchar(13,8, time[2]);
-  panel.putmediumchar(19,8, time[3]);  
+  panel.set_font(5,7);
+  panel.put_char(0,8, time[0]);
+  panel.put_char(6,8, time[1]);    
+  panel.put_char(13,8, time[2]);
+  panel.put_char(19,8, time[3]);  
 }
 
+/**
+ * Big digits
+ */
 void ApplicationClock2() {
   OnModeChanged();
+
+  char time[4];
+  sprintf(time, "%d%d%d%d", (hours>9) ? (hours/10) : 0, hours%10, (minutes>9) ? (minutes/10) : 0, minutes%10);
   
-  panel.putbigdigit(-1, 2, (hours>9) ? (hours/10) : 0);
-  panel.putbigdigit( 5, 2, hours%10);
-  panel.putbigdigit(12, 2, (minutes>9) ? (minutes/10) : 0);
-  panel.putbigdigit(18, 2, minutes%10);
+  panel.set_font(6,12);
+  panel.put_char(-1, 2, time[0]);
+  panel.put_char( 5, 2, time[1]);
+  panel.put_char(12, 2, time[2]);
+  panel.put_char(18, 2, time[3]);
 }
 
+/**
+ * print a binary clock column
+ */
 void printBinaryColumn(int value, int column) {
   int x=(column-1)*4;
   int y=0;
@@ -170,6 +191,9 @@ void printBinaryColumn(int value, int column) {
   }
 }
 
+/**
+ * Binary clock
+ */
 void ApplicationClock3() {
   OnModeChanged();
 
@@ -181,6 +205,9 @@ void ApplicationClock3() {
   printBinaryColumn(seconds%10, 6);
 }
 
+/**
+ * Setup main screen
+ */
 void ApplicationSetup() {
   OnModeChanged();
 
@@ -192,8 +219,9 @@ void ApplicationSetup() {
     delay(300);
   }
   
-  panel.putstring(1,1,3,"SETUP");
-  panel.putstring(1,8,3,"CLOCK");
+  panel.set_font(3,5);
+  panel.putstring(1,1,"SETUP");
+  panel.putstring(1,8,"CLOCK");
   
   if (curTime - lastPush > 5000) {
     panel.fade_down();
@@ -202,6 +230,9 @@ void ApplicationSetup() {
   }
 }
 
+/**
+ * Set hours
+ */
 void ApplicationSetHours() {
   OnModeChanged();
 
@@ -213,14 +244,19 @@ void ApplicationSetHours() {
     lastPush = curTime;
     delay(100);
   }
-  panel.putstring(1,1,3,"HOURS"); 
+  panel.set_font(3,5);
+  panel.putstring(1,1,"HOURS"); 
   char time[2];
   sprintf(time, "%d%d", (hours>9) ? (hours/10) : 0, hours%10);
   
-  panel.putmediumchar(13,8, time[0]);
-  panel.putmediumchar(19,8, time[1]);  
+  panel.set_font(5,7);
+  panel.put_char(13,8, time[0]);
+  panel.put_char(19,8, time[1]);  
 }
 
+/**
+ * Set minutes
+ */
 void ApplicationSetMinutes() {
   OnModeChanged();
 
@@ -232,14 +268,19 @@ void ApplicationSetMinutes() {
     lastPush = curTime;
     delay(100);
   }
-  panel.putstring(1,1,3,"MINUTES"); 
+  panel.set_font(3,5);
+  panel.putstring(1,1,"MINUTES"); 
   char time[2];
   sprintf(time, "%d%d", (minutes>9) ? (minutes/10) : 0, minutes%10);
   
-  panel.putmediumchar(13,8, time[0]);
-  panel.putmediumchar(19,8, time[1]);
+  panel.set_font(5,7);
+  panel.put_char(13,8, time[0]);
+  panel.put_char(19,8, time[1]);
 }
 
+/**
+ * Set year
+ */
 void ApplicationSetYear() {
   OnModeChanged();
 
@@ -251,16 +292,21 @@ void ApplicationSetYear() {
     lastPush = curTime;
     delay(100);
   }
-  panel.putstring(1,1,3,"YEAR"); 
+  panel.set_font(3,5);
+  panel.putstring(1,1,"YEAR"); 
   char time[2];
   itoa(year, time,10);
 
-  panel.putmediumchar(0,8, '2');
-  panel.putmediumchar(6,8, '0');  
-  panel.putmediumchar(12,8, time[0]);
-  panel.putmediumchar(18,8, time[1]);
+  panel.set_font(5,7);
+  panel.put_char(0,8, '2');
+  panel.put_char(6,8, '0');  
+  panel.put_char(12,8, time[0]);
+  panel.put_char(18,8, time[1]);
 }
 
+/**
+ * Set month
+ */
 void ApplicationSetMonth() {
   OnModeChanged();
 
@@ -272,14 +318,19 @@ void ApplicationSetMonth() {
     lastPush = curTime;
     delay(100);
   }
-  panel.putstring(1,1,3,"MONTH"); 
+  panel.set_font(3,5);
+  panel.putstring(1,1,"MONTH"); 
   char time[2];
   itoa(year, time,10);
 
   char* month_name = month_names[month-1];
-  panel.putstring(5,8, 5, month_name);
+  panel.set_font(5,7);
+  panel.putstring(5,8, month_name);
 }
 
+/**
+ * Set day
+ */
 void ApplicationSetDay() {
   OnModeChanged();
 
@@ -291,14 +342,19 @@ void ApplicationSetDay() {
     lastPush = curTime;
     delay(100);
   }
-  panel.putstring(1,1,3,"DAY"); 
+  panel.set_font(3,5);
+  panel.putstring(1,1,"DAY"); 
   char time[2];
   sprintf(time, "%d%d", (day>9) ? (day/10) : 0, day%10);
   
-  panel.putmediumchar(13,8, time[0]);
-  panel.putmediumchar(19,8, time[1]);
+  panel.set_font(5,7);
+  panel.put_char(13,8, time[0]);
+  panel.put_char(19,8, time[1]);
 }
 
+/**
+ * Set day of week
+ */
 void ApplicationSetDow() {
   OnModeChanged();
 
@@ -310,7 +366,9 @@ void ApplicationSetDow() {
     lastPush = curTime;
     delay(100);
   }
-  panel.putstring(1,1,3,"DOW"); 
+  panel.set_font(3,5);
+  panel.putstring(1,1,"DOW"); 
   char* dow_name = dow_names[dayofweek-1];
-  panel.putstring(5,8, 5, dow_name);
+  panel.set_font(5,7);
+  panel.putstring(5,8, dow_name);
 }
