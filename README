@@ -1,0 +1,12 @@
+Arduino compatible LED panel clock project
+Based on Sure 
+- Electronics 24x16 green led panel (3mm)
+- DS1307 rtc clock
+- Atmega328p
+
+Clock provide a few modes to you:
+1. Time with month name and day of month
+2. Big time (digits only)
+3. Binary clock
+
+Also you can set up the date and time.
