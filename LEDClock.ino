@@ -39,7 +39,7 @@ long lastPush = 0; // last pushed settings button (timestamp)
 long lastRead = 0; // last read from RTC (timestamp)
 int lastSec = 0; // last second value
 boolean dotsOn = false; // current dots on / off flag
-boolean enableTone = false; // enable / disable tone
+boolean enableTone = true; // enable / disable tone
 
 /**
  * Setup routine
@@ -125,10 +125,8 @@ void OnModeChanged() {
     }
     if (enableTone) {
       tone(buzzerPin, 5000, 100);
-    } else {
-      delay(100);
     }
-    delay(100);
+    delay(200);
     lastPush = curTime;
   }
 }
@@ -153,7 +151,10 @@ void ApplicationClock1() {
   panel.put_char(0,8, time[0]);
   panel.put_char(6,8, time[1]);    
   panel.put_char(13,8, time[2]);
-  panel.put_char(19,8, time[3]);  
+  panel.put_char(19,8, time[3]);
+  
+  panel.plot(11,15, (seconds%2 == 0) ? 1 : 0);
+  panel.plot(12,15, (seconds%2 == 0) ? 0 : 1);
 }
 
 /**
@@ -166,10 +167,13 @@ void ApplicationClock2() {
   sprintf(time, "%d%d%d%d", (hours>9) ? (hours/10) : 0, hours%10, (minutes>9) ? (minutes/10) : 0, minutes%10);
   
   panel.set_font(6,12);
-  panel.put_char(-1, 2, time[0]);
-  panel.put_char( 5, 2, time[1]);
-  panel.put_char(12, 2, time[2]);
-  panel.put_char(18, 2, time[3]);
+  panel.put_char(0, 2, time[0]);
+  panel.put_char( 6, 2, time[1]);
+  panel.put_char(13, 2, time[2]);
+  panel.put_char(19, 2, time[3]);
+  
+  panel.plot(11,15, (seconds%2 == 0) ? 1 : 0);
+  panel.plot(12,15, (seconds%2 == 0) ? 0 : 1);
 }
 
 /**
