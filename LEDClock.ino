@@ -14,15 +14,28 @@
 #include <ht1632c.h>
 #include <RealTimeClockDS1307.h>
 #include <Button.h>
+#include <Encoder.h>
+
+#define DEBUG 0
 
 const float pi = 3.141592653;
 ht1632c panel; // LED panel (DATA - D10, WRCLK - D11, CS1 - D4)
-Button btnMode(2, PULLUP); // button (D2)
-Button btnPlus(3, PULLUP); // button (D3)
+Button btnMode(15, PULLUP); // button (A1)
+Button btnPlus(16, PULLUP); // button (A2)
 #define buzzerPin 6 // buzzer (D6)
+Encoder eggEncoder(2, 3); // egg timer encoder connected to D2,D3
 enum modes {APP_CLOCK1, APP_CLOCK2, APP_CLOCK3, APP_SETUP, SET_HOURS, SET_MINUTES, SET_YEAR, SET_MONTH, SET_DAY, SET_DOW};
 char* month_names[12] = {"JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"};
 char* dow_names[7] = {"MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"};
+const byte lines[5][12] = {
+  {1,0,0,1,0,0,1,0,0,1,0,0},
+  {0,1,0,0,1,0,0,1,0,0,0,0},
+  {1,0,0,1,0,0,1,0,0,1,0,0},
+  {0,1,0,0,1,0,0,1,0,0,0,0},
+  {1,0,0,1,0,0,1,0,0,1,0,0}
+};
+#define minEggTimer 0 // min minutes
+#define maxEggTimer 120 // max minutes
 
 int mode = 0; // default mode to APP_CLOCK1
 int prevMode = 0; // previous mode
@@ -33,23 +46,36 @@ int dayofweek; // current day of week
 int day; // current day
 int month; // current month
 int year; // current year
+int eggTimer = 0; // egg timer value (minutes)
+long eggEncoderValue = 0; // egg encoder value (counter)
+long prevEggEncoderValue = 0; // previous egg encoder value (counter)
 
 long curTime = 0; // current time (timestamp from atmega)
 long lastPush = 0; // last pushed settings button (timestamp)
 long lastRead = 0; // last read from RTC (timestamp)
+long lastEggTimer = 0; // last change from egg timer encoder (timestamp)
+long lastAnimation = 0; // last egg timer animation changes
 int lastSec = 0; // last second value
 boolean dotsOn = false; // current dots on / off flag
 boolean enableTone = true; // enable / disable tone
+boolean eggTimerAnimationState = false; // egg timer animation state
 
 /**
  * Setup routine
  */
 void setup() {
+  
   // start clock if stopped
   if (RTC.isStopped()) {
     RTC.start();
   }
     RTC.readClock();
+    
+    
+  if (DEBUG) {
+    Serial.begin(9600);
+    Serial.println("Debug");
+  }
 }
 
 /**
@@ -62,6 +88,37 @@ void loop() {
   if (curTime - lastRead >= 1000) {
     RTC.readClock();
     lastRead = curTime;
+  }
+  
+  if (curTime - lastAnimation >= 100) {
+    eggTimerAnimationState = !eggTimerAnimationState;
+    lastAnimation = curTime;
+  }
+  
+  // read egg timer encoder value, and if it has been changed - set new eggTimer value
+  eggEncoderValue = eggEncoder.read();
+    
+  // constraint encoded value between min and max
+  int maxEggTimerDouble = maxEggTimer * 2;
+  eggEncoderValue = constrain(eggEncoderValue, minEggTimer, maxEggTimerDouble);
+  eggEncoder.write(eggEncoderValue); 
+  eggEncoderValue = map(eggEncoderValue, minEggTimer, maxEggTimerDouble, minEggTimer, maxEggTimer);
+  
+  // set new eggTimer
+  if (eggEncoderValue != prevEggEncoderValue) {
+      prevEggEncoderValue = eggEncoderValue;
+      eggTimer = eggEncoderValue;
+      
+        if (DEBUG) {
+          Serial.print("eggTimer: ");
+          Serial.print(eggTimer);
+          Serial.print("\n");
+        }
+      
+      lastEggTimer = curTime;
+      if (eggTimer == 0) {
+        panel.clear();
+      }
   }
   
   // update seconds / minutes / hours variables
@@ -137,13 +194,55 @@ void OnModeChanged() {
 void ApplicationClock1() {
   OnModeChanged();
   
-  char* month_name = month_names[month-1];
-  panel.set_font(3,5);
-  panel.putstring(1,1, month_name);
-  char date[2];
-  sprintf(date,"%d%d", (day>9) ? (day/10) : 0, day%10);
-  panel.putstring(16,1, date);
-  
+  // if eggTimer - print timer animation and remaining value
+  if (eggTimer) {     
+    PrintEggTimerAnimation();    
+    int diff = ((curTime - lastEggTimer) / 1000);
+    int remains = (diff < 10) ? (eggTimer * 60) :  (eggTimer * 60 - diff);
+    if (remains <= 0) remains = 0;
+    int remainsMinutes = remains / 60;
+    panel.set_font(3,5);
+    char egg[3];
+    
+    int hundreds = (remainsMinutes>99) ? (remainsMinutes/100) : 0;
+    int tens = (remainsMinutes>99) ? ((remainsMinutes-100)>9 ? ((remainsMinutes-100)/10) : 0) : ((remainsMinutes>9) ? (remainsMinutes/10) : 0);
+    int ones = remainsMinutes%10;
+    sprintf(egg,"%d%d%d", hundreds, tens, ones);
+    panel.putstring(12,1, egg);
+    
+    if (DEBUG) {
+      Serial.print("Remain: ");
+      Serial.print(egg);
+      Serial.print("\n");
+    }
+
+    // beep every second    
+    if (remains == 0) {
+      
+      if (enableTone && eggTimerAnimationState) {
+        tone(buzzerPin, 5000, 100);
+        if (DEBUG) {
+          Serial.println("Buzz On");
+        }
+      } else {
+        noTone(buzzerPin);
+        if (DEBUG) {
+          Serial.println("Buzz Off");
+        }
+      }
+    }    
+  } 
+  // otherwise print month name and day of month
+  else {
+    char* month_name = month_names[month-1];
+    panel.set_font(3,5);
+    panel.putstring(1,1, month_name);
+    char date[2];
+    sprintf(date,"%d%d", (day>9) ? (day/10) : 0, day%10);
+    panel.putstring(16,1, date);
+  }
+
+  // print time  
   char time[4];
   sprintf(time, "%d%d%d%d", (hours>9) ? (hours/10) : 0, hours%10, (minutes>9) ? (minutes/10) : 0, minutes%10);
   
@@ -154,7 +253,18 @@ void ApplicationClock1() {
   panel.put_char(19,8, time[3]);
   
   panel.plot(11,15, (seconds%2 == 0) ? 1 : 0);
-  panel.plot(12,15, (seconds%2 == 0) ? 0 : 1);
+  panel.plot(12,15, (seconds%2 == 0) ? 0 : 1);  
+}
+
+void PrintEggTimerAnimation() {  
+    for (int i=0; i<11; i++) {
+      for (int j=0; j<4; j++) {
+        int st = lines[j+eggTimerAnimationState][i];
+        panel.plot(i+1, j+1, st);
+      }
+    }
+    panel.line(1, 5, 10, 5 ,1);
+    panel.plot(11, 5, 0);
 }
 
 /**
