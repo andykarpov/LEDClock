@@ -1,12 +1,44 @@
-Arduino compatible LED panel clock project
-Based on Sure 
-- Electronics 24x16 green led panel (3mm)
+Arduino compatible LED panel clock project based on: 
+- Sure-Electronics 24x16 green led panel (3mm)
 - DS1307 rtc clock
-- Atmega328p
+- Atmega328p microcontroller
 
 Clock provide a few modes to you:
 1. Time with month name and day of month
 2. Big time (digits only)
 3. Binary clock
+4. Egg Timer (up to 120 minutes)
+5. Set up clock (set time, date, day of week, etc)
 
-Also you can set up the date and time.
+Part list:
+1. Atmega328P-PU microcontroller
+2. DS1307 real-time clock
+3. Sure Electronics 24x16 3mm green panel (on ht1632c chip)
+4. 32.768 kHz crystal
+5. 16 MHz crystal
+6. 3V battery with holder
+7. 2 x 22pf ceramic capacitors
+8. 1 x 10k resistor
+9. 16-pin IDC PCB header
+10. 10-pin IDC PCB header
+11. Buzzer
+12. 2 x push button switches
+13. Rotary encoder (Gray code)
+14. A few prototyping boards
+15. A lot of hook wires
+
+Optional:
+16. LM7805 power regulator (in case of unregulated power 9V supply)
+17. Power connector
+18. Power supply (5V regulated or 7-9V unregulated)
+19. Plastic case with glass panel
+20. A different screws, etc
+21. Ribbon cables with connectors
+
+External dependencies:
+1. digitalWriteFast library: http://code.google.com/p/digitalwritefast/
+2. ht1632c library: https://github.com/andykarpov/ht1632c
+3. RealTimeClockDS1307 library: https://github.com/davidhbrown/RealTimeClockDS1307.git
+4. Button library: http://arduino.cc/playground/Code/Button
+5. Encoder library: http://www.pjrc.com/teensy/td_libs_Encoder.html
+
