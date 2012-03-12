@@ -42,3 +42,5 @@ External dependencies:
 4. Button library: http://arduino.cc/playground/Code/Button
 5. Encoder library: http://www.pjrc.com/teensy/td_libs_Encoder.html
 
+Some of the libraries described above requires some minor patching to be compatible with Arduino 1.0.
+Patch is simplest as possible: Change WProgram.h and other incompatibles to Arduino.h.
